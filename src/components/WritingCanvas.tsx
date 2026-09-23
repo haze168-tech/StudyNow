@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { RotateCcw, Volume2, Eye, EyeOff, Brush, Eraser } from 'lucide-react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { RotateCcw, Volume2, Eye, EyeOff, Brush, Eraser, ChevronLeft, ChevronRight } from 'lucide-react';
 import { VocabWord } from '../types';
 import { VOCABULARY_LIST } from '../data/vocabulary';
 import { soundManager } from '../utils/audio';
@@ -40,6 +40,53 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
       }
     }
   }, [initialWordId, allWords]);
+
+  const currentIndex = useMemo(() => {
+    const idx = allWords.findIndex((w) => w.id === selectedWord.id);
+    return idx >= 0 ? idx : 0;
+  }, [allWords, selectedWord]);
+
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < allWords.length - 1;
+
+  const handleSelectWord = useCallback((word: VocabWord) => {
+    setSelectedWord(word);
+    setActiveCharIndex(0);
+    soundManager.speakChinese(word.simplified);
+  }, []);
+
+  const handlePrevWord = useCallback(() => {
+    if (hasPrev) {
+      soundManager.playClick();
+      handleSelectWord(allWords[currentIndex - 1]);
+    }
+  }, [hasPrev, allWords, currentIndex, handleSelectWord]);
+
+  const handleNextWord = useCallback(() => {
+    if (hasNext) {
+      soundManager.playClick();
+      handleSelectWord(allWords[currentIndex + 1]);
+    }
+  }, [hasNext, allWords, currentIndex, handleSelectWord]);
+
+  // Keyboard navigation for left/right arrows when not drawing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input or select
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrevWord();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNextWord();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePrevWord, handleNextWord]);
 
   const currentChar = selectedWord.characters[activeCharIndex] || {
     char: selectedWord.simplified[activeCharIndex] || selectedWord.simplified[0],
@@ -150,7 +197,7 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
             <span>田字格生字描红与临摹</span>
           </h2>
           <p className="text-xs text-stone-500 mt-1">
-            依照规范笔顺练习书写，体会汉字间架结构与偏旁部首
+            依照规范笔顺练习书写，体会汉字间架结构与偏旁部首。支持点击左右箭头或键盘方向键切换生字。
           </p>
         </div>
 
@@ -162,9 +209,7 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
             onChange={(e) => {
               const found = allWords.find((w) => w.id === e.target.value);
               if (found) {
-                setSelectedWord(found);
-                setActiveCharIndex(0);
-                soundManager.speakChinese(found.simplified);
+                handleSelectWord(found);
               }
             }}
             className="text-sm font-semibold border border-stone-300 rounded-lg px-3 py-1.5 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-500 max-w-xs sm:max-w-md truncate"
@@ -191,7 +236,7 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
                   soundManager.playClick();
                   soundManager.speakChinese(charDetail.char);
                 }}
-                className={`px-4 py-1.5 text-sm font-bold rounded-md transition-colors ${
+                className={`px-4 py-1.5 text-sm font-bold rounded-md transition-colors cursor-pointer ${
                   activeCharIndex === idx
                     ? 'bg-rose-600 text-white shadow-sm'
                     : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
@@ -202,43 +247,95 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
             ))}
           </div>
 
-          {/* Tianzige Board Container */}
-          <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] rounded-lg overflow-hidden tianzige-box select-none touch-none shadow-inner">
-            {/* Guide Character in Background */}
-            {showGuide && (
-              <div
-                className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-rose-300/45 font-kai font-bold leading-none"
-                style={{ fontSize: '260px' }}
-              >
-                {currentChar.char}
-              </div>
-            )}
+          {/* Tracing Area with Left / Right Navigation Arrows */}
+          <div className="relative w-full flex items-center justify-center gap-2 sm:gap-4 my-1">
+            {/* Left Arrow Button: Previous Word */}
+            <button
+              type="button"
+              onClick={handlePrevWord}
+              disabled={!hasPrev}
+              className={`p-2.5 sm:p-3 rounded-xl border border-stone-200 flex flex-col items-center justify-center gap-1 transition-all shadow-xs cursor-pointer ${
+                hasPrev
+                  ? 'bg-white text-stone-700 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 active:scale-95'
+                  : 'bg-stone-50 text-stone-300 border-stone-100 cursor-not-allowed opacity-40'
+              }`}
+              title={hasPrev ? `上一个生字：${allWords[currentIndex - 1]?.simplified}` : '已是第一个生字'}
+              aria-label="上一个生字"
+            >
+              <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
+              <span className="text-[10px] sm:text-[11px] font-bold hidden sm:inline">上一个</span>
+              {hasPrev && (
+                <span className="text-[10px] text-stone-400 font-kai hidden sm:inline">
+                  {allWords[currentIndex - 1]?.simplified}
+                </span>
+              )}
+            </button>
 
-            {/* Drawing Canvas */}
-            <canvas
-              ref={canvasRef}
-              width={400}
-              height={400}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-              className="absolute inset-0 w-full h-full cursor-crosshair z-10"
-            />
+            {/* Tianzige Board Container */}
+            <div className="relative w-[280px] h-[280px] sm:w-[380px] sm:h-[380px] rounded-lg overflow-hidden tianzige-box select-none touch-none shadow-inner shrink-0">
+              {/* Guide Character in Background */}
+              {showGuide && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-rose-300/45 font-kai font-bold leading-none"
+                  style={{ fontSize: '240px' }}
+                >
+                  {currentChar.char}
+                </div>
+              )}
+
+              {/* Drawing Canvas */}
+              <canvas
+                ref={canvasRef}
+                width={380}
+                height={380}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+                className="absolute inset-0 w-full h-full cursor-crosshair z-10"
+              />
+            </div>
+
+            {/* Right Arrow Button: Next Word */}
+            <button
+              type="button"
+              onClick={handleNextWord}
+              disabled={!hasNext}
+              className={`p-2.5 sm:p-3 rounded-xl border border-stone-200 flex flex-col items-center justify-center gap-1 transition-all shadow-xs cursor-pointer ${
+                hasNext
+                  ? 'bg-white text-stone-700 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 active:scale-95'
+                  : 'bg-stone-50 text-stone-300 border-stone-100 cursor-not-allowed opacity-40'
+              }`}
+              title={hasNext ? `下一个生字：${allWords[currentIndex + 1]?.simplified}` : '已是最后一个生字'}
+              aria-label="下一个生字"
+            >
+              <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
+              <span className="text-[10px] sm:text-[11px] font-bold hidden sm:inline">下一个</span>
+              {hasNext && (
+                <span className="text-[10px] text-stone-400 font-kai hidden sm:inline">
+                  {allWords[currentIndex + 1]?.simplified}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Index Counter under Canvas */}
+          <div className="text-xs text-stone-400 mt-2 font-mono">
+            {selectedWord.cardNumber ? `识字表 #${selectedWord.cardNumber} · ` : ''}第 {currentIndex + 1} / {allWords.length} 个
           </div>
 
           {/* Canvas Controls */}
-          <div className="mt-5 w-full flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-stone-100">
+          <div className="mt-4 w-full flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-stone-100">
             {/* Guide Toggle */}
             <button
               onClick={() => {
                 setShowGuide(!showGuide);
                 soundManager.playClick();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition-colors cursor-pointer"
             >
               {showGuide ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               <span>{showGuide ? '隐藏底字' : '显示底字'}</span>
@@ -248,9 +345,10 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-stone-500">墨色:</span>
               {[
-                { label: '浓墨', color: '#0f172a' },
-                { label: '朱砂', color: '#e11d48' },
-                { label: '青墨', color: '#0284c7' },
+                { name: '浓墨', color: '#1e293b' },
+                { name: '朱砂', color: '#e11d48' },
+                { name: '青蓝', color: '#0284c7' },
+                { name: '翠绿', color: '#059669' },
               ].map((c) => (
                 <button
                   key={c.color}
@@ -258,45 +356,52 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
                     setBrushColor(c.color);
                     soundManager.playClick();
                   }}
-                  title={c.label}
-                  className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                    brushColor === c.color ? 'scale-110 border-stone-800' : 'border-transparent opacity-80'
+                  className={`w-6 h-6 rounded-full border-2 transition-transform cursor-pointer ${
+                    brushColor === c.color ? 'scale-125 border-stone-800' : 'border-transparent'
                   }`}
                   style={{ backgroundColor: c.color }}
+                  title={c.name}
                 />
               ))}
             </div>
 
             {/* Brush Size */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Brush className="w-3.5 h-3.5 text-stone-500" />
-              <input
-                type="range"
-                min="4"
-                max="20"
-                value={brushSize}
-                onChange={(e) => setBrushSize(Number(e.target.value))}
-                className="w-20 accent-rose-600 cursor-pointer"
-                title={`画笔粗细: ${brushSize}px`}
-              />
+              <span className="text-xs text-stone-500">粗细:</span>
+              {[4, 8, 14].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => {
+                    setBrushSize(size);
+                    soundManager.playClick();
+                  }}
+                  className={`px-2 py-0.5 text-xs rounded border cursor-pointer ${
+                    brushSize === size
+                      ? 'bg-rose-50 border-rose-400 text-rose-700 font-bold'
+                      : 'bg-white border-stone-200 text-stone-600'
+                  }`}
+                >
+                  {size === 4 ? '细' : size === 8 ? '中' : '粗'}
+                </button>
+              ))}
             </div>
 
-            {/* Undo & Clear */}
+            {/* Clear & Undo Actions */}
             <div className="flex items-center gap-2">
               <button
                 onClick={handleUndo}
                 disabled={strokeHistory.length === 0}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 disabled:opacity-40 rounded-md transition-colors"
-                title="撤销上一步"
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-md transition-colors cursor-pointer"
+                title="撤销上一笔"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>撤销</span>
               </button>
-
               <button
                 onClick={handleClear}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors"
-                title="清空画板"
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors cursor-pointer"
+                title="清空当前画板"
               >
                 <Eraser className="w-3.5 h-3.5" />
                 <span>清空</span>
@@ -320,7 +425,7 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
 
               <button
                 onClick={() => soundManager.speakChinese(currentChar.char)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors cursor-pointer"
               >
                 <Volume2 className="w-4 h-4" />
                 <span>朗读</span>
