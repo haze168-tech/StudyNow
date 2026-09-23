@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  }
+}
+
+.font-kai {
+  font-family: 'Noto Serif SC', 'Kaiti SC', 'STKaiti', serif;
+}
+
+.font-sc {
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+/* Tianzige (Chinese 4-quadrant character grid) */
+.tianzige-box {
+  position: relative;
+  border: 1.5px solid #e11d48;
+  background-color: #fffaf0;
+}
+
+.tianzige-box::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  border-top: 1px dashed rgba(225, 29, 72, 0.4);
+  pointer-events: none;
+}
+
+.tianzige-box::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed rgba(225, 29, 72, 0.4);
+  pointer-events: none;
+}
+
+/* Print styles for printable worksheets and reports */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .page-break {
+    page-break-after: always;
+  }
+}
