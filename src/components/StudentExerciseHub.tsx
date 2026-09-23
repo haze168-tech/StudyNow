@@ -3,6 +3,7 @@ import { Sparkles, Play, Award, Flame, BookMarked, Headphones, PencilLine, Zap, 
 import { VocabCategory, Student, Assignment } from '../types';
 import { CATEGORY_MAP, VOCABULARY_LIST } from '../data/vocabulary';
 import { soundManager } from '../utils/audio';
+import bannerImg from '../assets/images/chinese_vocab_learning_1790181208491.jpg';
 
 interface StudentExerciseHubProps {
   student: Student;
@@ -128,7 +129,7 @@ export const StudentExerciseHub: React.FC<StudentExerciseHubProps> = ({
           <div className="lg:col-span-4 flex justify-center">
             <div className="relative rounded-xl overflow-hidden border border-rose-200/80 shadow-md max-w-xs w-full bg-white">
               <img
-                src="/src/assets/images/chinese_vocab_learning_1790181208491.jpg"
+                src={bannerImg}
                 alt="二年级生字学习与田字格字帖"
                 className="w-full h-44 object-cover"
                 referrerPolicy="no-referrer"
