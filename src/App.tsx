@@ -7,7 +7,8 @@ import { VocabularyDictionary } from './components/VocabularyDictionary';
 import { MistakeReview } from './components/MistakeReview';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import { PrintWorksheetModal } from './components/PrintWorksheetModal';
-import { Student, Assignment, QuizResult, QuizQuestion, VocabCategory } from './types';
+import { AddCustomWordModal } from './components/AddCustomWordModal';
+import { Student, Assignment, QuizResult, QuizQuestion, VocabCategory, VocabWord } from './types';
 import { INITIAL_STUDENTS, INITIAL_ASSIGNMENTS } from './data/initialStudents';
 import { VOCABULARY_LIST, CATEGORY_MAP } from './data/vocabulary';
 import { generateQuestionPool } from './utils/questionGenerator';
@@ -16,6 +17,22 @@ import { soundManager } from './utils/audio';
 export default function App() {
   // Navigation
   const [activeTab, setActiveTab] = useState<'exercises' | 'canvas' | 'dictionary' | 'mistakes' | 'teacher'>('exercises');
+
+  // Teacher Custom Words state (persisted)
+  const [customWords, setCustomWords] = useState<VocabWord[]>(() => {
+    try {
+      const stored = localStorage.getItem('hanzi_custom_words');
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
+  const [isAddCustomWordOpen, setIsAddCustomWordOpen] = useState(false);
+
+  // Merged full vocabulary list (standard curriculum + teacher added)
+  const allVocabWords = [...VOCABULARY_LIST, ...customWords];
 
   // Persistence for Students
   const [students, setStudents] = useState<Student[]>(() => {
@@ -62,6 +79,15 @@ export default function App() {
   // Save to localStorage on state changes
   useEffect(() => {
     try {
+      localStorage.setItem('hanzi_custom_words', JSON.stringify(customWords));
+    } catch {
+      // ignore
+    }
+  }, [customWords]);
+
+  // Save to localStorage on state changes
+  useEffect(() => {
+    try {
       localStorage.setItem('hanzi_students', JSON.stringify(students));
     } catch {
       // ignore
@@ -91,7 +117,7 @@ export default function App() {
     title: string,
     count: number
   ) => {
-    const questions = generateQuestionPool(category, mode, count);
+    const questions = generateQuestionPool(category, mode, count, allVocabWords);
     setActiveQuiz({
       questions,
       categoryTitle: CATEGORY_MAP[category]?.label || '综合测验',
@@ -175,9 +201,9 @@ export default function App() {
       return;
     }
 
-    const targetWords = VOCABULARY_LIST.filter((w) => missedWordIds.includes(w.id));
+    const targetWords = allVocabWords.filter((w) => missedWordIds.includes(w.id));
     const questions = targetWords.slice(0, 10).map((word, idx) => {
-      const otherWords = VOCABULARY_LIST.filter((w) => w.id !== word.id);
+      const otherWords = allVocabWords.filter((w) => w.id !== word.id);
       const distractors = otherWords.sort(() => 0.5 - Math.random()).slice(0, 3);
       const options = [
         { id: `opt-correct`, text: word.simplified, isCorrect: true },
@@ -206,12 +232,22 @@ export default function App() {
 
   // Launch single word targeted quiz (e.g. from Teacher Dashboard)
   const handleStartRemedialQuizForWord = (wordId: string) => {
-    const target = VOCABULARY_LIST.find((w) => w.id === wordId);
+    const target = allVocabWords.find((w) => w.id === wordId);
     if (!target) return;
 
     // Switch to exercises tab and launch a mini 5-question test including this word
     setActiveTab('exercises');
     handleStartQuiz(target.category, 'all_mix', `【${target.simplified}】专项突破训练`, 5);
+  };
+
+  // Add custom word entered by teacher
+  const handleAddCustomWord = (newWord: VocabWord) => {
+    setCustomWords((prev) => [newWord, ...prev]);
+  };
+
+  // Delete custom word
+  const handleDeleteCustomWord = (wordId: string) => {
+    setCustomWords((prev) => prev.filter((w) => w.id !== wordId));
   };
 
   // Jump to Writing Canvas with specific word
@@ -262,6 +298,8 @@ export default function App() {
         currentStudentId={currentStudentId}
         onSelectStudent={(id) => setCurrentStudentId(id)}
         onOpenPrintModal={() => setIsPrintModalOpen(true)}
+        onOpenAddCustomWordModal={() => setIsAddCustomWordOpen(true)}
+        customWordCount={customWords.length}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
       />
@@ -293,13 +331,15 @@ export default function App() {
             )}
 
             {activeTab === 'canvas' && (
-              <WritingCanvas initialWordId={canvasWordId} />
+              <WritingCanvas initialWordId={canvasWordId} words={allVocabWords} />
             )}
 
             {activeTab === 'dictionary' && (
               <VocabularyDictionary
                 student={currentStudent}
                 onOpenWritingCanvas={handleOpenWritingCanvas}
+                words={allVocabWords}
+                onDeleteWord={handleDeleteCustomWord}
               />
             )}
 
@@ -308,6 +348,7 @@ export default function App() {
                 student={currentStudent}
                 onRetestMistakes={handleRetestMistakes}
                 onOpenWritingCanvas={handleOpenWritingCanvas}
+                words={allVocabWords}
               />
             )}
 
@@ -315,6 +356,9 @@ export default function App() {
               <TeacherDashboard
                 students={students}
                 assignments={assignments}
+                words={allVocabWords}
+                customWords={customWords}
+                onOpenAddCustomWordModal={() => setIsAddCustomWordOpen(true)}
                 onAddStudent={handleAddStudent}
                 onCreateAssignment={handleCreateAssignment}
                 onSelectStudentForPractice={(sId) => {
@@ -333,6 +377,16 @@ export default function App() {
       <PrintWorksheetModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
+        words={allVocabWords}
+      />
+
+      {/* Teacher Add Custom Word Modal */}
+      <AddCustomWordModal
+        isOpen={isAddCustomWordOpen}
+        onClose={() => setIsAddCustomWordOpen(false)}
+        onAddWord={handleAddCustomWord}
+        customWords={customWords}
+        onDeleteCustomWord={handleDeleteCustomWord}
       />
     </div>
   );

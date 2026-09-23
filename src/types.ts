@@ -1,4 +1,4 @@
-export type VocabCategory = 'nature' | 'animals' | 'school' | 'actions' | 'wisdom';
+export type VocabCategory = 'nature' | 'animals' | 'school' | 'actions' | 'wisdom' | 'custom';
 
 export interface CharacterDetail {
   char: string;

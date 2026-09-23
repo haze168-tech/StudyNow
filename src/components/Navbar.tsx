@@ -10,6 +10,8 @@ interface NavbarProps {
   currentStudentId: string;
   onSelectStudent: (studentId: string) => void;
   onOpenPrintModal: () => void;
+  onOpenAddCustomWordModal: () => void;
+  customWordCount: number;
   soundEnabled: boolean;
   onToggleSound: () => void;
 }
@@ -21,6 +23,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentStudentId,
   onSelectStudent,
   onOpenPrintModal,
+  onOpenAddCustomWordModal,
+  customWordCount,
   soundEnabled,
   onToggleSound,
 }) => {
@@ -34,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setActiveTab('exercises')}
-            className="text-left group flex items-center gap-2"
+            className="text-left group flex items-center gap-2 cursor-pointer"
           >
             <div className="w-9 h-9 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
               字
@@ -54,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <nav className="flex items-center gap-1 sm:gap-6 text-sm font-medium text-stone-600">
           <button
             onClick={() => setActiveTab('exercises')}
-            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap ${
+            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap cursor-pointer ${
               activeTab === 'exercises'
                 ? 'text-rose-600 font-semibold border-b-2 border-rose-600'
                 : 'hover:text-stone-900'
@@ -65,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           <button
             onClick={() => setActiveTab('canvas')}
-            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap ${
+            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap cursor-pointer ${
               activeTab === 'canvas'
                 ? 'text-rose-600 font-semibold border-b-2 border-rose-600'
                 : 'hover:text-stone-900'
@@ -76,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('dictionary')}
-            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap ${
+            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap cursor-pointer ${
               activeTab === 'dictionary'
                 ? 'text-rose-600 font-semibold border-b-2 border-rose-600'
                 : 'hover:text-stone-900'
@@ -87,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('mistakes')}
-            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap ${
+            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap cursor-pointer ${
               activeTab === 'mistakes'
                 ? 'text-rose-600 font-semibold border-b-2 border-rose-600'
                 : 'hover:text-stone-900'
@@ -98,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('teacher')}
-            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap flex items-center gap-1 ${
+            className={`py-1 text-xs sm:text-sm transition-colors relative whitespace-nowrap flex items-center gap-1 cursor-pointer ${
               activeTab === 'teacher'
                 ? 'text-indigo-600 font-semibold border-b-2 border-indigo-600'
                 : 'text-indigo-700 hover:text-indigo-900'
@@ -109,13 +113,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </nav>
 
-        {/* Zone 3: Primary Actions (Student Switcher, Sound & Print) */}
+        {/* Zone 3: Primary Actions (Student Switcher, Sound & Print & Add Words) */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Quick Teacher Add Word Button */}
+          <button
+            onClick={onOpenAddCustomWordModal}
+            title="教师录入自定义生字"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors cursor-pointer"
+          >
+            <span className="font-bold text-emerald-600 text-sm leading-none">+</span>
+            <span className="hidden sm:inline">录入生字</span>
+            {customWordCount > 0 && (
+              <span className="ml-0.5 px-1 py-0.2 bg-emerald-600 text-white text-[10px] rounded-full">
+                {customWordCount}
+              </span>
+            )}
+          </button>
+
           {/* Sound Toggle */}
           <button
             onClick={onToggleSound}
             title={soundEnabled ? '静音' : '开启音效'}
-            className="p-2 text-stone-500 hover:text-stone-800 rounded-md hover:bg-stone-100 transition-colors"
+            className="p-2 text-stone-500 hover:text-stone-800 rounded-md hover:bg-stone-100 transition-colors cursor-pointer"
           >
             {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-600" /> : <VolumeX className="w-4 h-4 text-stone-400" />}
           </button>
@@ -124,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenPrintModal}
             title="打印生字练习单"
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition-colors"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition-colors cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>打印字帖</span>

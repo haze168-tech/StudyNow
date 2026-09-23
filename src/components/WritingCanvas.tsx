@@ -6,15 +6,18 @@ import { soundManager } from '../utils/audio';
 
 interface WritingCanvasProps {
   initialWordId?: string;
+  words?: VocabWord[];
 }
 
-export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId }) => {
+export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, words }) => {
+  const allWords = words && words.length > 0 ? words : VOCABULARY_LIST;
+
   const [selectedWord, setSelectedWord] = useState<VocabWord>(() => {
     if (initialWordId) {
-      const found = VOCABULARY_LIST.find((w) => w.id === initialWordId);
+      const found = allWords.find((w) => w.id === initialWordId);
       if (found) return found;
     }
-    return VOCABULARY_LIST[0];
+    return allWords[0];
   });
 
   const [activeCharIndex, setActiveCharIndex] = useState(0);
@@ -146,7 +149,7 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId }) =
           <select
             value={selectedWord.id}
             onChange={(e) => {
-              const found = VOCABULARY_LIST.find((w) => w.id === e.target.value);
+              const found = allWords.find((w) => w.id === e.target.value);
               if (found) {
                 setSelectedWord(found);
                 setActiveCharIndex(0);
@@ -155,7 +158,7 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId }) =
             }}
             className="text-sm font-semibold border border-stone-300 rounded-lg px-3 py-1.5 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
           >
-            {VOCABULARY_LIST.map((word) => (
+            {allWords.map((word) => (
               <option key={word.id} value={word.id}>
                 {word.simplified} ({word.pinyin}) - {word.categoryName}
               </option>

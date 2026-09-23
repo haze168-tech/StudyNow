@@ -8,17 +8,20 @@ interface MistakeReviewProps {
   student: Student;
   onRetestMistakes: () => void;
   onOpenWritingCanvas: (wordId: string) => void;
+  words?: VocabWord[];
 }
 
 export const MistakeReview: React.FC<MistakeReviewProps> = ({
   student,
   onRetestMistakes,
   onOpenWritingCanvas,
+  words,
 }) => {
+  const allWords = words && words.length > 0 ? words : VOCABULARY_LIST;
   // Aggregate all mistakes across recent results + struggling words
   const allMistakes = student.recentResults.flatMap((r) => r.mistakes);
 
-  const strugglingWords = VOCABULARY_LIST.filter((w) =>
+  const strugglingWords = allWords.filter((w) =>
     student.strugglingWordIds.includes(w.id)
   );
 

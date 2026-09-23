@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Volume2, BookOpen, CheckCircle, Clock } from 'lucide-react';
+import { Search, Volume2, BookOpen, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import { VocabWord, VocabCategory, Student } from '../types';
 import { VOCABULARY_LIST, CATEGORY_MAP } from '../data/vocabulary';
 import { soundManager } from '../utils/audio';
@@ -7,17 +7,22 @@ import { soundManager } from '../utils/audio';
 interface VocabularyDictionaryProps {
   student: Student;
   onOpenWritingCanvas: (wordId: string) => void;
+  words?: VocabWord[];
+  onDeleteWord?: (wordId: string) => void;
 }
 
 export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
   student,
   onOpenWritingCanvas,
+  words,
+  onDeleteWord,
 }) => {
+  const allWords = words && words.length > 0 ? words : VOCABULARY_LIST;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<VocabCategory | 'all'>('all');
   const [selectedSemester, setSelectedSemester] = useState<number | 'all'>('all');
 
-  const filteredWords = VOCABULARY_LIST.filter((word) => {
+  const filteredWords = allWords.filter((word) => {
     const matchesSearch =
       word.simplified.includes(searchTerm) ||
       word.pinyin.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,16 +141,32 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
                     </div>
                   </div>
 
-                  {/* Audio Pronunciation Button */}
-                  <button
-                    onClick={() => {
-                      soundManager.speakChinese(word.simplified);
-                    }}
-                    className="p-2 text-stone-600 hover:text-rose-600 bg-stone-50 hover:bg-rose-50 rounded-lg transition-colors"
-                    title="播放发音"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                  </button>
+                  {/* Audio Pronunciation Button & Delete if custom */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        soundManager.speakChinese(word.simplified);
+                      }}
+                      className="p-2 text-stone-600 hover:text-rose-600 bg-stone-50 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      title="播放发音"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
+                    {word.id.startsWith('custom-vocab-') && onDeleteWord && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`确定删除自定义生字【${word.simplified}】吗？`)) {
+                            onDeleteWord(word.id);
+                            soundManager.playClick();
+                          }
+                        }}
+                        className="p-2 text-stone-400 hover:text-rose-600 bg-stone-50 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="删除自定义生字"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Radicals & Stroke Info */}

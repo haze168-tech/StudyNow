@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { 
   Users, BarChart3, AlertTriangle, BookCheck, Plus, Download, Printer, 
-  Search, Eye, CheckCircle2, ChevronRight, X, FileText, Send 
+  Search, Eye, CheckCircle2, ChevronRight, X, FileText, Send, Edit3, BookOpen
 } from 'lucide-react';
-import { Student, Assignment, VocabCategory } from '../types';
+import { Student, Assignment, VocabCategory, VocabWord } from '../types';
 import { VOCABULARY_LIST, CATEGORY_MAP } from '../data/vocabulary';
 import { soundManager } from '../utils/audio';
 
 interface TeacherDashboardProps {
   students: Student[];
   assignments: Assignment[];
+  words?: VocabWord[];
+  customWords?: VocabWord[];
+  onOpenAddCustomWordModal: () => void;
   onAddStudent: (newStudent: Omit<Student, 'id' | 'recentResults' | 'masteredWordIds' | 'strugglingWordIds'>) => void;
   onCreateAssignment: (assignment: Omit<Assignment, 'id' | 'completedStudentIds'>) => void;
   onSelectStudentForPractice: (studentId: string) => void;
@@ -20,12 +23,16 @@ interface TeacherDashboardProps {
 export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   students,
   assignments,
+  words,
+  customWords = [],
+  onOpenAddCustomWordModal,
   onAddStudent,
   onCreateAssignment,
   onSelectStudentForPractice,
   onOpenPrintModal,
   onStartRemedialQuizForWord,
 }) => {
+  const allWords = words && words.length > 0 ? words : VOCABULARY_LIST;
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<Student | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
   const [performanceFilter, setPerformanceFilter] = useState<'all' | 'high' | 'mid' | 'low'>('all');
@@ -58,7 +65,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
   // Category mastery breakdown
   const categoryMastery: Record<string, { totalWords: number; masteredCount: number }> = {};
-  VOCABULARY_LIST.forEach((w) => {
+  allWords.forEach((w) => {
     if (!categoryMastery[w.category]) {
       categoryMastery[w.category] = { totalWords: 0, masteredCount: 0 };
     }
@@ -86,7 +93,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([wId, count]) => ({
-      word: VOCABULARY_LIST.find((w) => w.id === wId) || VOCABULARY_LIST[0],
+      word: allWords.find((w) => w.id === wId) || allWords[0],
       count,
     }));
 
@@ -140,6 +147,17 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => {
+              soundManager.playClick();
+              onOpenAddCustomWordModal();
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>自定录入生字 ({customWords.length})</span>
+          </button>
+
           <button
             onClick={() => {
               soundManager.playClick();

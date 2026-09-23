@@ -14,14 +14,16 @@ export function shuffleArray<T>(array: T[]): T[] {
 export function generateQuestionPool(
   category: VocabCategory | 'all',
   mode: 'all_mix' | 'context_fill' | 'listening' | 'pinyin_char' | 'word_formation',
-  count: number = 10
+  count: number = 10,
+  customList?: VocabWord[]
 ): QuizQuestion[] {
-  let pool = VOCABULARY_LIST;
+  const allWords = customList && customList.length > 0 ? customList : VOCABULARY_LIST;
+  let pool = allWords;
   if (category !== 'all') {
-    pool = VOCABULARY_LIST.filter((w) => w.category === category);
+    pool = allWords.filter((w) => w.category === category);
   }
-  if (pool.length < 4) {
-    pool = VOCABULARY_LIST;
+  if (pool.length === 0) {
+    pool = allWords;
   }
 
   const shuffledWords = shuffleArray(pool);
@@ -47,8 +49,8 @@ export function generateQuestionPool(
     }
 
     // Pick 3 distractors
-    const otherWords = VOCABULARY_LIST.filter((w) => w.id !== targetWord.id);
-    const distractors = shuffleArray(otherWords).slice(0, 3);
+    const otherWords = allWords.filter((w) => w.id !== targetWord.id);
+    const distractors = shuffleArray(otherWords.length >= 3 ? otherWords : VOCABULARY_LIST.filter(w => w.id !== targetWord.id)).slice(0, 3);
 
     if (qType === 'mc_context_fill') {
       const options = shuffleArray([

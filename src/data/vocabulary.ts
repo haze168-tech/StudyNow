@@ -672,4 +672,5 @@ export const CATEGORY_MAP: Record<string, { label: string; desc: string; icon: s
   school: { label: '校园日常', desc: '学习习惯、礼貌待人', icon: '🎒' },
   actions: { label: '动作情感', desc: '生活举止、内心情意', icon: '🏃' },
   wisdom: { label: '哲理故事', desc: '成长道理、思辨认知', icon: '💡' },
+  custom: { label: '老师自定', desc: '教师补充生字词库', icon: '✏️' },
 };

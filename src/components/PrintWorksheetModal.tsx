@@ -7,11 +7,13 @@ import { soundManager } from '../utils/audio';
 interface PrintWorksheetModalProps {
   isOpen: boolean;
   onClose: () => void;
+  words?: VocabWord[];
 }
 
 export const PrintWorksheetModal: React.FC<PrintWorksheetModalProps> = ({
   isOpen,
   onClose,
+  words,
 }) => {
   const [category, setCategory] = useState<VocabCategory | 'all'>('all');
   const [includePinyinWrite, setIncludePinyinWrite] = useState(true);
@@ -20,10 +22,12 @@ export const PrintWorksheetModal: React.FC<PrintWorksheetModalProps> = ({
 
   if (!isOpen) return null;
 
+  const allWords = words && words.length > 0 ? words : VOCABULARY_LIST;
+
   const filteredWords =
     category === 'all'
-      ? VOCABULARY_LIST.slice(0, 16)
-      : VOCABULARY_LIST.filter((w) => w.category === category).slice(0, 16);
+      ? allWords.slice(0, 16)
+      : allWords.filter((w) => w.category === category).slice(0, 16);
 
   const handlePrint = () => {
     soundManager.playClick();
