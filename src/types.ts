@@ -1,4 +1,4 @@
-export type VocabCategory = 'nature' | 'animals' | 'school' | 'actions' | 'wisdom' | 'custom';
+export type VocabCategory = 'shizibiao' | 'nature' | 'animals' | 'school' | 'actions' | 'wisdom' | 'custom';
 
 export interface CharacterDetail {
   char: string;
@@ -9,6 +9,7 @@ export interface CharacterDetail {
 
 export interface VocabWord {
   id: string;
+  cardNumber?: number;
   simplified: string;
   pinyin: string;
   pinyinTones: string[]; // e.g. ["wēn", "nuǎn"]

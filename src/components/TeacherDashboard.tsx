@@ -185,7 +185,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>打印测验纸</span>
+            <span>打印字帖与卡片</span>
           </button>
 
           <button

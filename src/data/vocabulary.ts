@@ -1,6 +1,9 @@
 import { VocabWord } from '../types';
+import { SHIZIBIAO_WORDS } from './shizibiaoWords';
 
-export const VOCABULARY_LIST: VocabWord[] = [
+export { SHIZIBIAO_WORDS };
+
+export const THEMATIC_VOCABULARY_LIST: VocabWord[] = [
   // --- Nature & Seasons (自然四季) ---
   {
     id: 'vocab-1',
@@ -665,8 +668,14 @@ export const VOCABULARY_LIST: VocabWord[] = [
   },
 ];
 
+export const VOCABULARY_LIST: VocabWord[] = [
+  ...SHIZIBIAO_WORDS,
+  ...THEMATIC_VOCABULARY_LIST,
+];
+
 export const CATEGORY_MAP: Record<string, { label: string; desc: string; icon: string }> = {
-  all: { label: '全部单元', desc: '二年级核心全覆盖', icon: '📚' },
+  all: { label: '全部字词', desc: '490+ 核心识字与词汇', icon: '📚' },
+  shizibiao: { label: '二上识字表', desc: '部编教材467字卡 (1-467)', icon: '📇' },
   nature: { label: '自然四季', desc: '气候天气、四时景物', icon: '🌸' },
   animals: { label: '动物植物', desc: '生灵草木、森林家园', icon: '🐾' },
   school: { label: '校园日常', desc: '学习习惯、礼貌待人', icon: '🎒' },

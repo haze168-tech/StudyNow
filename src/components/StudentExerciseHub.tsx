@@ -201,7 +201,7 @@ export const StudentExerciseHub: React.FC<StudentExerciseHubProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
           {Object.entries(CATEGORY_MAP).map(([catKey, info]) => {
             const isSelected = selectedCategory === catKey;
             return (

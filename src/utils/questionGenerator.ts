@@ -122,11 +122,39 @@ export function generateQuestionPool(
         explanation: `你听到的是【${targetWord.simplified}】(${targetWord.pinyin})。意思是：${targetWord.chineseMeaning}。`,
       });
     } else {
-      // word_formation: Split 2-character word, e.g. "温 [ ? ]" -> options: [暖, 凉, 冰, 冻]
-      const char1 = targetWord.characters[0]?.char || targetWord.simplified[0];
-      const char2 = targetWord.characters[1]?.char || targetWord.simplified[1];
+      // word_formation: Split 2-character word or form word from single character with its collocation
+      let char1: string;
+      let char2: string;
+      let fullWord: string;
+
+      if (targetWord.simplified.length >= 2) {
+        char1 = targetWord.characters[0]?.char || targetWord.simplified[0];
+        char2 = targetWord.characters[1]?.char || targetWord.simplified[1];
+        fullWord = targetWord.simplified;
+      } else if (targetWord.collocations && targetWord.collocations.length > 0 && targetWord.collocations[0].length >= 2) {
+        const col = targetWord.collocations[0];
+        fullWord = col;
+        if (col.startsWith(targetWord.simplified)) {
+          char1 = targetWord.simplified;
+          char2 = col.slice(1, 2);
+        } else {
+          char1 = col.slice(0, 1);
+          char2 = targetWord.simplified;
+        }
+      } else {
+        char1 = targetWord.simplified;
+        char2 = targetWord.collocations[0] || '字';
+        fullWord = `${char1}${char2}`;
+      }
       
-      const wrongChars = distractors.map(d => d.simplified[1] || d.simplified[0]);
+      const wrongChars = distractors.map(d => {
+        if (d.simplified.length >= 2) return d.simplified[1] || d.simplified[0];
+        if (d.collocations && d.collocations[0] && d.collocations[0].length >= 2) {
+          return d.collocations[0].slice(1, 2) || d.simplified;
+        }
+        return d.simplified;
+      }).filter(c => c !== char2).slice(0, 3);
+
       const options = shuffleArray([
         { id: `opt-correct`, text: char2, isCorrect: true },
         ...wrongChars.map((wc, i) => ({ id: `opt-dist-${i}`, text: wc, isCorrect: false })),
@@ -136,12 +164,12 @@ export function generateQuestionPool(
         id: `q-${index}-${targetWord.id}`,
         type: 'word_formation',
         title: '生字组词探险',
-        prompt: `${char1} + [ ? ] = 【 ${targetWord.simplified} 】`,
-        subPrompt: `词义：${targetWord.chineseMeaning}`,
-        audioText: targetWord.simplified,
+        prompt: `${char1} + [ ? ] = 【 ${fullWord} 】`,
+        subPrompt: `拼音提示：${targetWord.pinyin}`,
+        audioText: fullWord,
         targetWord,
         options,
-        explanation: `【${char1}】与【${char2}】组合成词语【${targetWord.simplified}】(${targetWord.pinyin})。`,
+        explanation: `【${char1}】与【${char2}】组合成词语【${fullWord}】。`,
       });
     }
   });

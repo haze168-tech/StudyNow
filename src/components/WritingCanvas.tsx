@@ -30,6 +30,17 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPoint, setLastPoint] = useState<{ x: number; y: number } | null>(null);
 
+  // Sync selected word when initialWordId changes from navigation
+  useEffect(() => {
+    if (initialWordId) {
+      const found = allWords.find((w) => w.id === initialWordId);
+      if (found) {
+        setSelectedWord(found);
+        setActiveCharIndex(0);
+      }
+    }
+  }, [initialWordId, allWords]);
+
   const currentChar = selectedWord.characters[activeCharIndex] || {
     char: selectedWord.simplified[activeCharIndex] || selectedWord.simplified[0],
     pinyin: selectedWord.pinyinTones[activeCharIndex] || '',
@@ -156,11 +167,11 @@ export const WritingCanvas: React.FC<WritingCanvasProps> = ({ initialWordId, wor
                 soundManager.speakChinese(found.simplified);
               }
             }}
-            className="text-sm font-semibold border border-stone-300 rounded-lg px-3 py-1.5 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
+            className="text-sm font-semibold border border-stone-300 rounded-lg px-3 py-1.5 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-500 max-w-xs sm:max-w-md truncate"
           >
             {allWords.map((word) => (
               <option key={word.id} value={word.id}>
-                {word.simplified} ({word.pinyin}) - {word.categoryName}
+                {word.cardNumber ? `#${word.cardNumber} ` : ''}{word.simplified} ({word.pinyin}) - {word.categoryName}
               </option>
             ))}
           </select>
