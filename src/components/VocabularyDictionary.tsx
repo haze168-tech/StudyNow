@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Volume2, BookOpen, CheckCircle, Clock, Trash2, Layers, RotateCw, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, Volume2, BookOpen, CheckCircle, Clock, Trash2, Layers, RotateCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { VocabWord, VocabCategory, Student } from '../types';
 import { VOCABULARY_LIST, CATEGORY_MAP } from '../data/vocabulary';
 import { soundManager } from '../utils/audio';
@@ -10,6 +10,8 @@ interface VocabularyDictionaryProps {
   words?: VocabWord[];
   onDeleteWord?: (wordId: string) => void;
 }
+
+export type CardSize = 'compact' | 'medium' | 'large' | 'huge';
 
 export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
   student,
@@ -22,14 +24,34 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<VocabCategory | 'all'>('shizibiao');
   const [selectedSemester, setSelectedSemester] = useState<number | 'all'>('all');
   const [selectedSheet, setSelectedSheet] = useState<number | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'dictionary' | 'flashcards'>('flashcards');
+  const [viewMode, setViewMode] = useState<'flashcards' | 'dictionary'>('flashcards');
   
+  // Card size options: 'compact' is the previous default (smallest), with 'medium', 'large', and 'huge'
+  const [cardSize, setCardSize] = useState<CardSize>('compact');
+
   // Track flipped state for flashcards by wordId
   const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
 
-  // Pagination
+  // Pagination based on card size:
+  // Compact (smallest): 30 cards per page (matches physical sheet 5x6)
+  // Medium: 24 cards
+  // Large: 16 cards
+  // Huge: 12 cards
+  const pageSize = useMemo(() => {
+    switch (cardSize) {
+      case 'huge':
+        return 12;
+      case 'large':
+        return 18;
+      case 'medium':
+        return 24;
+      case 'compact':
+      default:
+        return 30;
+    }
+  }, [cardSize]);
+
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 30; // 30 cards per page matching the PDF's 30 cards/sheet (5x6)
 
   // 16 Sheets in the PDF (each 30 cards, 16th sheet has 17 cards: 451-467)
   const sheets = useMemo(() => {
@@ -70,12 +92,12 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
     });
   }, [allWords, searchTerm, selectedCategory, selectedSemester, selectedSheet]);
 
-  // Reset to page 1 on filter changes
+  // Reset to page 1 on filter or card size changes
   const totalPages = Math.max(1, Math.ceil(filteredWords.length / pageSize));
   const paginatedWords = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredWords.slice(start, start + pageSize);
-  }, [filteredWords, currentPage]);
+  }, [filteredWords, currentPage, pageSize]);
 
   const handleCategoryChange = (cat: VocabCategory | 'all') => {
     soundManager.playClick();
@@ -90,6 +112,52 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
     setCurrentPage(1);
   };
 
+  const handleSizeChange = (size: CardSize) => {
+    soundManager.playClick();
+    setCardSize(size);
+    setCurrentPage(1);
+  };
+
+  // Flip all / reset all on current page
+  const handleFlipAll = (flip: boolean) => {
+    soundManager.playClick();
+    const newFlipped = { ...flippedCards };
+    paginatedWords.forEach((w) => {
+      newFlipped[w.id] = flip;
+    });
+    setFlippedCards(newFlipped);
+  };
+
+  // Size configurations for flashcards mode
+  const flashcardGridClass = useMemo(() => {
+    switch (cardSize) {
+      case 'huge':
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6';
+      case 'large':
+        return 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5';
+      case 'medium':
+        return 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4';
+      case 'compact':
+      default:
+        // Original standard compact size (smallest)
+        return 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3.5';
+    }
+  }, [cardSize]);
+
+  // Size configurations for dictionary view
+  const dictionaryGridClass = useMemo(() => {
+    switch (cardSize) {
+      case 'huge':
+        return 'grid grid-cols-1 gap-6';
+      case 'large':
+        return 'grid grid-cols-1 md:grid-cols-2 gap-5';
+      case 'medium':
+      case 'compact':
+      default:
+        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+    }
+  }, [cardSize]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       {/* Top Header */}
@@ -102,7 +170,7 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
             </span>
           </div>
           <p className="text-xs text-stone-500 mt-1">
-            收录部编版二年级上册《识字表》全册 1-467 号生字卡片，支持字卡双面翻转、标准拼音发音、田字格临摹与多单元检索
+            收录部编版二年级上册《识字表》全册 1-467 号生字卡片，支持字卡尺寸缩放、双面翻转、标准拼音发音、田字格临摹与多单元检索
           </p>
         </div>
 
@@ -207,6 +275,89 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
             ))}
           </div>
         )}
+
+        {/* Card Size Selector Toolbar */}
+        <div className="pt-2.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-stone-700 flex items-center gap-1">
+              <span>📐 字卡大小：</span>
+            </span>
+            <div className="inline-flex bg-stone-100 p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={() => handleSizeChange('compact')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer ${
+                  cardSize === 'compact'
+                    ? 'bg-white text-rose-700 shadow-xs font-bold'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+                title="默认最小规格（原版紧凑 5×6，适于快速浏览全览）"
+              >
+                标准紧凑 (小)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSizeChange('medium')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer ${
+                  cardSize === 'medium'
+                    ? 'bg-white text-rose-700 shadow-xs font-bold'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+                title="中等适中尺寸，字体清晰舒适"
+              >
+                适中 (中)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSizeChange('large')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer ${
+                  cardSize === 'large'
+                    ? 'bg-white text-rose-700 shadow-xs font-bold'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+                title="大字大卡，适合低年级专注认读"
+              >
+                放大 (大)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSizeChange('huge')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer ${
+                  cardSize === 'huge'
+                    ? 'bg-white text-rose-700 shadow-xs font-bold'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+                title="超大字卡，巨型田字格，方便投屏或近视护眼"
+              >
+                特大 (超大)
+              </button>
+            </div>
+            <span className="text-stone-400 text-[11px] hidden sm:inline">
+              (当前每页显示 {pageSize} 个)
+            </span>
+          </div>
+
+          {/* Quick Actions for Flashcard view */}
+          {viewMode === 'flashcards' && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-stone-400 text-[11px]">本页快捷翻转：</span>
+              <button
+                type="button"
+                onClick={() => handleFlipAll(true)}
+                className="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium text-[11px] cursor-pointer"
+              >
+                全翻看拼音
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFlipAll(false)}
+                className="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium text-[11px] cursor-pointer"
+              >
+                全翻看大字
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Count & Pagination Header */}
@@ -216,7 +367,7 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
           <span>已掌握：<strong className="text-emerald-600 tabular-nums">{student.masteredWordIds.length}</strong> 个</span>
           {viewMode === 'flashcards' && (
             <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              💡 提示：点击任意字卡或“翻转”可查看背面拼音与组词
+              💡 提示：点击任意字卡即可翻转查看拼音与组词
             </span>
           )}
         </div>
@@ -255,10 +406,45 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
 
       {/* FLASHCARD MODE (Simulating the Double-sided Print Cards) */}
       {viewMode === 'flashcards' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3.5">
+        <div className={flashcardGridClass}>
           {paginatedWords.map((word) => {
             const isFlipped = !!flippedCards[word.id];
             const isMastered = student.masteredWordIds.includes(word.id);
+
+            // Dynamic styles according to cardSize
+            let tianzigeSizeClass = 'w-20 h-20 sm:w-24 sm:h-24';
+            let charFontClass = 'text-4xl sm:text-5xl';
+            let minHeightClass = 'min-h-[140px]';
+            let backCharClass = 'text-2xl';
+            let backPinyinClass = 'text-xs';
+            let backColClass = 'text-xs';
+            let paddingClass = 'py-4';
+
+            if (cardSize === 'medium') {
+              tianzigeSizeClass = 'w-24 h-24 sm:w-28 sm:h-28';
+              charFontClass = 'text-5xl sm:text-6xl';
+              minHeightClass = 'min-h-[170px]';
+              backCharClass = 'text-3xl';
+              backPinyinClass = 'text-sm';
+              backColClass = 'text-sm';
+              paddingClass = 'py-5';
+            } else if (cardSize === 'large') {
+              tianzigeSizeClass = 'w-32 h-32 sm:w-36 sm:h-36';
+              charFontClass = 'text-6xl sm:text-7xl';
+              minHeightClass = 'min-h-[220px]';
+              backCharClass = 'text-4xl';
+              backPinyinClass = 'text-base font-bold';
+              backColClass = 'text-base font-semibold';
+              paddingClass = 'py-6';
+            } else if (cardSize === 'huge') {
+              tianzigeSizeClass = 'w-40 h-40 sm:w-48 sm:h-48';
+              charFontClass = 'text-7xl sm:text-8xl';
+              minHeightClass = 'min-h-[280px]';
+              backCharClass = 'text-5xl';
+              backPinyinClass = 'text-lg font-bold';
+              backColClass = 'text-lg font-semibold';
+              paddingClass = 'py-8';
+            }
 
             return (
               <div
@@ -267,13 +453,13 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
                 onClick={() => toggleFlip(word.id)}
               >
                 {/* Top Badge: Card Number from PDF */}
-                <div className="flex items-center justify-between px-2.5 pt-2 text-[11px]">
+                <div className="flex items-center justify-between px-3 pt-2 text-[11px]">
                   <span className="font-mono font-bold text-stone-400 group-hover:text-rose-600">
                     {word.cardNumber ? `#${word.cardNumber}` : '字卡'}
                   </span>
                   <div className="flex items-center gap-1">
                     {isMastered && (
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
                     )}
                     <button
                       type="button"
@@ -284,7 +470,7 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
                       className="p-1 text-stone-400 hover:text-rose-600 rounded transition-colors"
                       title="发音"
                     >
-                      <Volume2 className="w-3.5 h-3.5" />
+                      <Volume2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -292,44 +478,44 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
                 {/* Card Content: Front vs Back */}
                 {!isFlipped ? (
                   /* FRONT OF CARD: Big character in Tianzige (楷体大字) */
-                  <div className="py-4 flex flex-col items-center justify-center">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 tianzige-box flex items-center justify-center rounded-lg shadow-inner bg-stone-50">
-                      <span className="text-4xl sm:text-5xl font-bold font-kai text-stone-900">
+                  <div className={`${paddingClass} flex flex-col items-center justify-center`}>
+                    <div className={`${tianzigeSizeClass} tianzige-box flex items-center justify-center rounded-lg shadow-inner bg-stone-50 transition-all`}>
+                      <span className={`${charFontClass} font-bold font-kai text-stone-900 select-none`}>
                         {word.simplified}
                       </span>
                     </div>
-                    <span className="text-[10px] text-stone-400 mt-2 flex items-center gap-1">
+                    <span className="text-[11px] text-stone-400 mt-2.5 flex items-center gap-1">
                       <RotateCw className="w-3 h-3" /> 点击看拼音组词
                     </span>
                   </div>
                 ) : (
                   /* BACK OF CARD: Mirror layout from PDF: Blue character, Red pinyin, Black collocations */
-                  <div className="py-2.5 px-3 flex flex-col items-center justify-center bg-rose-50/40 min-h-[130px]">
+                  <div className={`py-3 px-3 flex flex-col items-center justify-center bg-rose-50/40 ${minHeightClass} transition-all`}>
                     {/* Blue character */}
-                    <div className="text-2xl font-bold font-kai text-sky-700">
+                    <div className={`${backCharClass} font-bold font-kai text-sky-700`}>
                       {word.simplified}
                     </div>
                     {/* Red pinyin */}
-                    <div className="text-xs font-bold text-rose-600 mt-0.5 tracking-wider">
+                    <div className={`${backPinyinClass} font-bold text-rose-600 mt-0.5 tracking-wider`}>
                       {word.pinyin}
                     </div>
                     {/* Black collocations */}
-                    <div className="mt-2 space-y-0.5 text-center">
+                    <div className="mt-2.5 space-y-1 text-center">
                       {word.collocations.map((col, cIdx) => (
-                        <div key={cIdx} className="text-xs font-semibold text-stone-800">
+                        <div key={cIdx} className={`${backColClass} text-stone-800`}>
                           {col}
                         </div>
                       ))}
                     </div>
-                    <span className="text-[10px] text-stone-400 mt-2 flex items-center gap-1">
+                    <span className="text-[11px] text-stone-400 mt-2.5 flex items-center gap-1">
                       <RotateCw className="w-3 h-3" /> 点击返回正面
                     </span>
                   </div>
                 )}
 
                 {/* Bottom Bar: Quick Practice Link */}
-                <div className="px-2.5 py-1.5 bg-stone-50 border-t border-stone-100 flex items-center justify-between text-[11px]">
-                  <span className="text-stone-400 truncate text-[10px]">
+                <div className="px-3 py-2 bg-stone-50 border-t border-stone-100 flex items-center justify-between text-xs">
+                  <span className="text-stone-400 truncate text-[11px]">
                     {word.categoryName || '二年级'}
                   </span>
                   <button
@@ -338,10 +524,10 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
                       e.stopPropagation();
                       onOpenWritingCanvas(word.id);
                     }}
-                    className="text-rose-600 hover:text-rose-800 font-bold flex items-center gap-0.5 text-[11px]"
+                    className="text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 text-xs"
                   >
-                    <BookOpen className="w-3 h-3" />
-                    <span>写字</span>
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>临摹写字</span>
                   </button>
                 </div>
               </div>
@@ -350,15 +536,23 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
         </div>
       ) : (
         /* DICTIONARY VIEW (Detailed with strokes, radicals, sentences) */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={dictionaryGridClass}>
           {paginatedWords.map((word) => {
             const isMastered = student.masteredWordIds.includes(word.id);
             const isStruggling = student.strugglingWordIds.includes(word.id);
 
+            // Scale font and tianzige in dictionary view as well
+            let dictTianzigeSize = 'w-12 h-12 text-2xl';
+            if (cardSize === 'large' || cardSize === 'huge') {
+              dictTianzigeSize = 'w-16 h-16 text-3xl';
+            } else if (cardSize === 'medium') {
+              dictTianzigeSize = 'w-14 h-14 text-2xl';
+            }
+
             return (
               <div
                 key={word.id}
-                className="bg-white rounded-xl p-4.5 border border-stone-200 hover:border-stone-300 transition-all flex flex-col justify-between shadow-xs"
+                className="bg-white rounded-xl p-5 border border-stone-200 hover:border-stone-300 transition-all flex flex-col justify-between shadow-xs"
               >
                 <div>
                   {/* Header row */}
@@ -369,7 +563,7 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
                         {word.simplified.split('').map((char, cIdx) => (
                           <div
                             key={cIdx}
-                            className="w-12 h-12 tianzige-box flex items-center justify-center rounded text-2xl font-bold font-kai text-stone-900 shadow-xs"
+                            className={`${dictTianzigeSize} tianzige-box flex items-center justify-center rounded font-bold font-kai text-stone-900 shadow-xs`}
                           >
                             {char}
                           </div>
@@ -378,9 +572,9 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
 
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-rose-600">{word.pinyin}</span>
+                          <span className="text-base font-bold text-rose-600">{word.pinyin}</span>
                           {word.cardNumber && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-stone-100 text-stone-600 rounded">
+                            <span className="text-[11px] font-bold px-1.5 py-0.5 bg-stone-100 text-stone-600 rounded">
                               #{word.cardNumber}
                             </span>
                           )}
@@ -425,21 +619,21 @@ export const VocabularyDictionary: React.FC<VocabularyDictionaryProps> = ({
                   </div>
 
                   {/* Meaning & Sentence */}
-                  <div className="mt-2.5 text-xs">
+                  <div className="mt-3 text-xs">
                     <div className="text-stone-700 leading-relaxed font-medium">
                       {word.chineseMeaning}
                     </div>
                     {word.sentence && (
-                      <div className="mt-2 text-stone-600 bg-amber-50/60 p-2 rounded border border-amber-100 text-[11px] leading-relaxed">
+                      <div className="mt-2 text-stone-600 bg-amber-50/60 p-2.5 rounded border border-amber-100 text-xs leading-relaxed">
                         “{word.sentence}”
                       </div>
                     )}
                   </div>
 
                   {/* Collocations */}
-                  <div className="mt-2.5 flex flex-wrap gap-1">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {word.collocations.map((col, idx) => (
-                      <span key={idx} className="text-[11px] bg-rose-50 font-medium text-rose-800 border border-rose-100 px-2 py-0.5 rounded-md">
+                      <span key={idx} className="text-xs bg-rose-50 font-medium text-rose-800 border border-rose-100 px-2 py-0.5 rounded-md">
                         {col}
                       </span>
                     ))}
